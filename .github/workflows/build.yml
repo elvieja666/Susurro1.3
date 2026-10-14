@@ -1,0 +1,31 @@
+name: Build Susurro (macOS AU + VST3)
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build-macos:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release -j4
+
+      - name: Ad-hoc sign + zip
+        run: |
+          OUT=build/Susurro_artefacts/Release
+          codesign --force --deep --sign - "$OUT/AU/Susurro.component"
+          codesign --force --deep --sign - "$OUT/VST3/Susurro.vst3"
+          mkdir -p dist
+          ditto -c -k --keepParent "$OUT/AU/Susurro.component" dist/Susurro-AU.zip
+          ditto -c -k --keepParent "$OUT/VST3/Susurro.vst3"     dist/Susurro-VST3.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Susurro-macOS
+          path: dist/*.zip
